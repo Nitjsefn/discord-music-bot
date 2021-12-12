@@ -1,12 +1,29 @@
 const {prefix, token} = require("./bot.json");
 const { Client, Intents } = require('discord.js');
+const { resourceUsage } = require("process");
+const { resourceLimits } = require("worker_threads");
 const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 const { log } = console;
 bot.login(token);
 bot.once("ready", () => log("Bot connected"));
-bot.on("messageCreate", msg => {
-	log("Got message")
+bot.on("messageCreate", msg =>
+{
 	if(msg.author.isBot) return;
 	if(msg.content[0] != prefix) return;
-	log("Got command!");
+	let arguments = msg.content.split();
+	arguments[0] = arguments[0].slice(1);
+	let command = arguments.shift();
+	switch(command)
+	{
+		case "pl": playLocal(msg, arguments); break;
+		case "skip": skipMusic(msg); break;
+		case "pause": pauseMusic(msg); break;
+		case "stop": stopMusic(msg); break;
+		case "resume": resumeMusic(msg); break;
+		case "leave": leaveVoiceChannel(msg); break;
+		case "remove": removeSong(msg, arguments); break;
+		case "np": displayNowPlayingSong(msg); break;
+		case "queue": displayQueue(msg); break;
+		default: msg.reply("Wrong command"); break;
+	}
 });
