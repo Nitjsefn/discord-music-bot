@@ -1,9 +1,18 @@
 const {prefix, token} = require("./bot.json");
 const { Client, Intents } = require('discord.js');
-const { resourceUsage } = require("process");
+const { resourceUsage, listenerCount } = require("process");
 const { resourceLimits } = require("worker_threads");
 const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 const { log } = console;
+var queuesInGuildsCollection = new Map();
+class Queue
+{
+	Queue()
+	{
+		let voiceChannel;
+		let queue = new Array();
+	}
+}
 bot.login(token);
 bot.once("ready", () => log("Bot connected"));
 bot.on("messageCreate", msg =>
