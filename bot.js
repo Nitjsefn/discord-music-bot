@@ -5,6 +5,16 @@ const { resourceLimits } = require("worker_threads");
 const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 const { log } = console;
 var queuesInGuildsCollection = new Map();
+class Song
+{
+	Song()
+	{
+		let tittle = "";
+		let path = "";
+		let durationInSec = 0;
+		let author = "";
+	}
+}
 class Queue
 {
 	Queue()
