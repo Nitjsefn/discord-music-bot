@@ -24,6 +24,7 @@ bot.on("messageCreate", msg =>
 		case "remove": removeSong(msg, arguments); break;
 		case "np": displayNowPlayingSong(msg); break;
 		case "queue": displayQueue(msg); break;
+		case "search": searchForMusic(msg, arguments); break;
 		default: msg.reply("Wrong command"); break;
 	}
 });
