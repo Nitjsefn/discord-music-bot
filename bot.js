@@ -25,7 +25,10 @@ class Queue
 }
 bot.login(token);
 bot.once("ready", () => log("Bot connected"));
-bot.on("messageCreate", msg =>
+bot.on("messageCreate", msg => messageCreateAndUpdateMethod(msg));
+bot.on("messageUpdate", msg => messageCreateAndUpdateMethod(msg));
+
+function messageCreateAndUpdateMethod(msg)
 {
 	if(msg.author.isBot) return;
 	if(msg.content[0] != prefix) return;
@@ -46,4 +49,4 @@ bot.on("messageCreate", msg =>
 		case "search": searchForMusic(msg, arguments); break;
 		default: msg.reply("Wrong command"); break;
 	}
-});
+}
