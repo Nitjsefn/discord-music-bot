@@ -47,6 +47,7 @@ function messageCreateAndUpdateMethod(msg)
 		case "np": displayNowPlayingSong(msg); break;
 		case "queue": displayQueue(msg); break;
 		case "search": searchForMusic(msg, arguments); break;
+		case "join": joinVoiceChannel(msg); break;
 		default: msg.reply("Wrong command"); break;
 	}
 }
