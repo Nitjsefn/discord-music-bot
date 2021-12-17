@@ -16,14 +16,7 @@ class Song
 		let author = "";
 	}
 }
-class Queue
-{
-	Queue()
-	{
-		let voiceChannel;
-		let queue = new Array();
-	}
-}
+
 bot.login(token);
 bot.once("ready", () => log("Bot connected"));
 bot.on("messageCreate", msg => messageCreateAndUpdateMethod(msg));
