@@ -3,7 +3,7 @@ const { Client, Intents } = require('discord.js');
 const { resourceUsage, listenerCount } = require("process");
 const { resourceLimits } = require("worker_threads");
 const DCVoice = require('@discordjs/voice');
-const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
+const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
 const { log } = console;
 var queuesInGuildsCollection = new Map();
 class Song
