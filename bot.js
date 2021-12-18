@@ -8,6 +8,7 @@ const { log } = console;
 const fs = require('fs');
 var queuesInGuildsCollection = new Map();
 var pathToPlaylistsLibrary = new Map();
+var repeatStatusInGuildsCollection = new Map();
 /*class Song
 {
 	Song()
@@ -71,9 +72,13 @@ function playLocalPlaylist(msg, args)
 		{
 			if (err) { console.log(err); return; }
 			if (queuesInGuildsCollection.hasValue(guildID)) songsList = queuesInGuildsCollection.get(guildID);
+			else
+			{
+				//Create Audio player and start playing songs, the same for else below
+			}
 			foreach (file in files)
 			{
-				if(file.indexOf("mp3") < 0) continue;
+				if(file.indexOf(".mp3") < 0) return;
 				songsList.add(file);
 			}
 			queuesInGuildsCollection.set(guildID, songsList);
@@ -85,9 +90,13 @@ function playLocalPlaylist(msg, args)
 		{
 			if (err) { console.log(err); return; }
 			if (queuesInGuildsCollection.hasValue(guildID)) songsList = queuesInGuildsCollection.get(guildID);
+			else
+			{
+				
+			}
 			foreach (file in files)
 			{
-				if(file.indexOf("mp3") < 0) continue;
+				if(file.indexOf(".mp3") < 0) return;
 				songsList.add(file);
 			}
 			queuesInGuildsCollection.set(guildID, songsList);
