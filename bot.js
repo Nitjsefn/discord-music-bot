@@ -7,7 +7,7 @@ const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MES
 const { log } = console;
 const fs = require('fs');
 var queuesInGuildsCollection = new Map();
-var pathToPlaylistsLibrary = new Map();
+var pathToPlaylistsLibrary = process.argv[2];
 var repeatStatusInGuildsCollection = new Map();
 /*class Song
 {
@@ -46,7 +46,6 @@ function messageCreateAndUpdateMethod(msg)
 		case "queue": displayQueue(msg); break;
 		case "search": searchForMusic(msg, arguments); break;
 		case "join": DCVoice.joinVoiceChannel({channelId: msg.member.voice.channelId, guildId: msg.guildId, adapterCreator: msg.channel.guild.voiceAdapterCreator}); break;
-		case "setPath": pathToPlaylistsLibrary.set(msg.guildId, arguments[0]); break;
 		default: msg.reply("Wrong command"); break;
 	}
 }
@@ -62,9 +61,9 @@ function playLocalPlaylist(msg, args)
 	let songsList;
 	let guildID = msg.guildId;
 	let playlistName = arguments[0];
-	if(pathToPlaylistsLibrary.hasValue(guildID))
+	if(pathToPlaylistsLibrary)
 	{
-		let defPath = pathToPlaylistsLibrary.get(guildID);
+		let defPath = pathToPlaylistsLibrary;
 		if (!(defPath[defPath.length - 1] === '/')) defPath += '/';
 		let pathToLocalPlaylist = defPath + playlistName;
 		let songsList = new Array();
