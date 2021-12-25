@@ -74,12 +74,12 @@ function playLocalPlaylist(msg, args)
 			else
 			{
 				//Create Audio player and start playing songs, the same for else below
-
+				player = DCVoice.createAudioPlayer();
 			}
 			foreach (file in files)
 			{
 				if(file.indexOf(".mp3") < 0) return;
-				songsList.add(file);
+				songsList.add(file); //Add checking if last position of queue in not the repeat status
 			}
 			queuesInGuildsCollection.set(guildID, songsList);
 		});
