@@ -8,7 +8,7 @@ const { log } = console;
 const fs = require('fs');
 var queuesInGuildsCollection = new Map();
 var pathToPlaylistsLibrary = process.argv[2];
-var repeatStatusInGuildsCollection = new Map();
+var audioPlayerInGuild = new Map();
 /*class Song
 {
 	Song()
@@ -74,6 +74,7 @@ function playLocalPlaylist(msg, args)
 			else
 			{
 				//Create Audio player and start playing songs, the same for else below
+
 			}
 			foreach (file in files)
 			{
