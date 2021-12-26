@@ -29,7 +29,7 @@ function messageCreateAndUpdateMethod(msg)
 {
 	if(msg.author.isBot) return;
 	if(msg.content[0] != prefix) return;
-	let arguments = msg.content.split();
+	let arguments = msg.content.split(' ');
 	arguments[0] = arguments[0].slice(1);
 	let command = arguments.shift();
 	switch(command)
@@ -53,6 +53,7 @@ function messageCreateAndUpdateMethod(msg)
 function leaveVoiceChannel(msg)
 {
 	let connection = DCVoice.getVoiceConnection(msg.guildId);
+	if(!connection) {msg.reply("I am not in the voice channel"); return;}
 	connection.destroy();
 }
 
@@ -60,35 +61,44 @@ function playLocalPlaylist(msg, args)
 {
 	let songsList;
 	let guildID = msg.guildId;
-	let playlistName = arguments[0];
+	let playlistName = args[0];
 	let defPath = pathToPlaylistsLibrary;
-	if (!(defPath[defPath.length - 1] === '/')) defPath += '/'; //Add searching for playlist name, where u could find out if this is only name or full directory, which will return full path to this dir
+	if (!(defPath[defPath.length - 1] === '/' || defPath[defPath.length - 1] === '\\')) defPath += '\\'; //Add searching for playlist name, where u could find out if this is only name or full directory, which will return full path to this dir
 	let pathToLocalPlaylist = defPath + playlistName;
-	let songsList = new Array();
+	songsList = new Array();
 	fs.readdir(pathToLocalPlaylist, (err, files) => 
 	{
 		if (err) { console.log(err); return; }
-		if (queuesInGuildsCollection.hasValue(guildID)) songsList = queuesInGuildsCollection.get(guildID);
+		if (queuesInGuildsCollection.has(guildID)) songsList = queuesInGuildsCollection.get(guildID);
 		else
 		{
-			player = DCVoice.createAudioPlayer({
+			songsList.push('off');
+			let player = DCVoice.createAudioPlayer({
 				behaviors: {
-					noSubscriber: NoSubscriberBehavior.Pause,
+					noSubscriber: DCVoice.NoSubscriberBehavior.Pause,
 				},
 			});
 			let connection = DCVoice.getVoiceConnection(guildID);
 			if(!connection) connection = DCVoice.joinVoiceChannel({channelId: msg.member.voice.channelId, guildId: guildID, adapterCreator: msg.channel.guild.voiceAdapterCreator});
 			connection.subscribe(player);
-			foreach (file in files)
+			for (let i = 0; i < files.length -1; i++)
 			{
-				if(file.indexOf(".mp3") > 0) {player.play(pathToLocalPlaylist + '/' + file); break;}
+				//log('Playing started... ' + files[i]);
+				if(files[i].indexOf(".mp3") > 0) {
+					let pathToSong = pathToLocalPlaylist + '\\' + files[i];
+					//log(pathToSong);
+					let resrc = DCVoice.createAudioResource(pathToSong);
+					player.play(resrc);
+					break;
+				}
 			}
+			
 		}
-		foreach (file in files)
-		{
-			if(file.indexOf(".mp3") < 0) return;
-			songsList.insert(songsList.length-2, pathToLocalPlaylist + '/' + file);
-		}
+		for (let i = 0; i < files.length -1; i++)
+        {
+            if(files[i].indexOf(".mp3") < 0) return;
+            songsList.splice(songsList.length-2, 0, pathToLocalPlaylist + '/' + files[i]);
+        }
 		queuesInGuildsCollection.set(guildID, songsList);
 	});
 }
