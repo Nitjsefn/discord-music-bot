@@ -99,6 +99,7 @@ function playLocalPlaylist(msg, args)
             if(files[i].indexOf(".mp3") < 0) return;
             songsList.splice(songsList.length-2, 0, pathToLocalPlaylist + '/' + files[i]);
         }
+		if(songsList.length < 2) return;
 		queuesInGuildsCollection.set(guildID, songsList);
 	});
 }
