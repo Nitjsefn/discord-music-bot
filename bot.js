@@ -7,7 +7,7 @@ const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MES
 const { log } = console;
 const fs = require('fs');
 var queuesInGuildsCollection = new Map();
-var pathToPlaylistsLibrary = process.argv[2];
+const pathToPlaylistsLibrary = process.argv[2];
 var audioPlayerInGuild = new Map();
 /*class Song
 {
@@ -61,45 +61,34 @@ function playLocalPlaylist(msg, args)
 	let songsList;
 	let guildID = msg.guildId;
 	let playlistName = arguments[0];
-	if(pathToPlaylistsLibrary)
+	let defPath = pathToPlaylistsLibrary;
+	if (!(defPath[defPath.length - 1] === '/')) defPath += '/'; //Add searching for playlist name, where u could find out if this is only name or full directory, which will return full path to this dir
+	let pathToLocalPlaylist = defPath + playlistName;
+	let songsList = new Array();
+	fs.readdir(pathToLocalPlaylist, (err, files) => 
 	{
-		let defPath = pathToPlaylistsLibrary;
-		if (!(defPath[defPath.length - 1] === '/')) defPath += '/';
-		let pathToLocalPlaylist = defPath + playlistName;
-		let songsList = new Array();
-		fs.readdir(pathToLocalPlaylist, (err, files) => 
+		if (err) { console.log(err); return; }
+		if (queuesInGuildsCollection.hasValue(guildID)) songsList = queuesInGuildsCollection.get(guildID);
+		else
 		{
-			if (err) { console.log(err); return; }
-			if (queuesInGuildsCollection.hasValue(guildID)) songsList = queuesInGuildsCollection.get(guildID);
-			else
-			{
-				//Create Audio player and start playing songs, the same for else below
-				player = DCVoice.createAudioPlayer();
-			}
+			player = DCVoice.createAudioPlayer({
+				behaviors: {
+					noSubscriber: NoSubscriberBehavior.Pause,
+				},
+			});
+			let connection = DCVoice.getVoiceConnection(guildID);
+			if(!connection) connection = DCVoice.joinVoiceChannel({channelId: msg.member.voice.channelId, guildId: guildID, adapterCreator: msg.channel.guild.voiceAdapterCreator});
+			connection.subscribe(player);
 			foreach (file in files)
 			{
-				if(file.indexOf(".mp3") < 0) return;
-				songsList.add(file); //Add checking if last position of queue in not the repeat status
+				if(file.indexOf(".mp3") > 0) {player.play(pathToLocalPlaylist + '/' + file); break;}
 			}
-			queuesInGuildsCollection.set(guildID, songsList);
-		});
-	}
-	else
-	{
-		fs.readdir(playlistName, (err, files) => 
+		}
+		foreach (file in files)
 		{
-			if (err) { console.log(err); return; }
-			if (queuesInGuildsCollection.hasValue(guildID)) songsList = queuesInGuildsCollection.get(guildID);
-			else
-			{
-				
-			}
-			foreach (file in files)
-			{
-				if(file.indexOf(".mp3") < 0) return;
-				songsList.add(file);
-			}
-			queuesInGuildsCollection.set(guildID, songsList);
-		});
-	}
+			if(file.indexOf(".mp3") < 0) return;
+			songsList.insert(songsList.length-2, pathToLocalPlaylist + '/' + file);
+		}
+		queuesInGuildsCollection.set(guildID, songsList);
+	});
 }
