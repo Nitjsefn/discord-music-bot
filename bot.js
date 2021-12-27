@@ -63,7 +63,7 @@ function playLocalPlaylist(msg, args)
 	let guildID = msg.guildId;
 	let playlistName = args[0];
 	let defPath = pathToPlaylistsLibrary;
-	if (!(defPath[defPath.length - 1] === '/' || defPath[defPath.length - 1] === '\\')) defPath += '\\'; //Add searching for playlist name, where u could find out if this is only name or full directory, which will return full path to this dir
+	if (!(defPath[defPath.length - 1] === '/' || defPath[defPath.length - 1] === '\\')) defPath += '/'; //Add searching for playlist name, where u could find out if this is only name or full directory, which will return full path to this dir
 	let pathToLocalPlaylist = defPath + playlistName;
 	songsList = new Array();
 	fs.readdir(pathToLocalPlaylist, (err, files) => 
@@ -81,20 +81,23 @@ function playLocalPlaylist(msg, args)
 			let connection = DCVoice.getVoiceConnection(guildID);
 			if(!connection) connection = DCVoice.joinVoiceChannel({channelId: msg.member.voice.channelId, guildId: guildID, adapterCreator: msg.channel.guild.voiceAdapterCreator});
 			connection.subscribe(player);
-			for (let i = 0; i < files.length -1; i++)
+			log("Going into loop\t" + files.length);
+			for (let i = 0; i < files.length; i++)
 			{
-				//log('Playing started... ' + files[i]);
+				log("Playing started... ");
 				if(files[i].indexOf(".mp3") > 0) {
-					let pathToSong = pathToLocalPlaylist + '\\' + files[i];
+					let pathToSong = pathToLocalPlaylist + '/' + files[i];
 					//log(pathToSong);
 					let resrc = DCVoice.createAudioResource(pathToSong);
+					log("Playing " + resrc);
 					player.play(resrc);
 					break;
 				}
 			}
+			log("I am out of loop");
 			
 		}
-		for (let i = 0; i < files.length -1; i++)
+		for (let i = 0; i < files.length; i++)
         {
             if(files[i].indexOf(".mp3") < 0) return;
             songsList.splice(songsList.length-2, 0, pathToLocalPlaylist + '/' + files[i]);
