@@ -45,14 +45,15 @@ function messageCreateAndUpdateMethod(msg)
 		case "queue": displayQueue(msg); break;
 		case "search": searchForMusic(msg, arguments); break;
 		case "join": DCVoice.joinVoiceChannel({channelId: msg.member.voice.channelId, guildId: msg.guildId, adapterCreator: msg.channel.guild.voiceAdapterCreator}); break;
-		default: msg.reply("Wrong command"); break;
+		case "repeat": changeRepeatStatus(msg, arguments); break;
+		default: msg.reply("Wrong command!"); break;
 	}
 }
 
 function leaveVoiceChannel(msg)
 {
 	let connection = DCVoice.getVoiceConnection(msg.guildId);
-	if(!connection) {msg.reply("I am not in the voice channel"); return;}
+	if(!connection) {msg.reply("I am not in the voice channel!"); return;}
 	connection.destroy();
 	if(audioPlayerInGuild.has(msg.guildId))
 	{
@@ -119,9 +120,25 @@ function skipMusic(msg)
 	let queue = queuesInGuildsCollection.get(msg.guildId);
 	if(queue[queue.length-1] === "all") queue.splice(queue.length-2, 0, queue[0]);
 	queue = queue.slice(1);
-	if(queue.length < 2) { msg.reply("That was the last song in the queue"); audioPlayerInGuild.get(msg.guildId).stop(); queuesInGuildsCollection.delete(msg.guildId); audioPlayerInGuild.delete(msg.guildId); DCVoice.getVoiceConnection(msg.guildId).destroy(); return; }
+	if(queue.length < 2) { msg.reply("That was the last song in the queue!"); audioPlayerInGuild.get(msg.guildId).stop(); queuesInGuildsCollection.delete(msg.guildId); audioPlayerInGuild.delete(msg.guildId); DCVoice.getVoiceConnection(msg.guildId).destroy(); return; }
 	let rsc = DCVoice.createAudioResource(queue[0]);
 	let player = audioPlayerInGuild.get(msg.guildId);
 	player.play(rsc);
+	queuesInGuildsCollection.set(msg.guildId, queue);
+	msg.reply("Skipped song!");
+}
+
+function changeRepeatStatus(msg, args)
+{
+	if(!queuesInGuildsCollection.has(msg.guildId)) { msg.reply("I am not playing anything"); return; }
+	if(queuesInGuildsCollection.get(msg.guildId).length < 2) { msg.reply("I am not playing anything"); queuesInGuildsCollection(msg.guildId).delete(); return; }
+	let queue = queuesInGuildsCollection.get(msg.guildId);
+	switch(args[0])
+	{
+		case "off": queue[queue.length-1] = "off"; msg.reply("Changed repeat status to ***off*** !"); break;
+		case "one": queue[queue.length-1] = "one"; msg.reply("Changed repeat status to ***one*** !"); break;
+		case "all": queue[queue.length-1] = "all"; msg.reply("Changed repeat status to ***all*** !"); break;
+		default: msg.reply("Wrong repeat parameter!"); return;
+	}
 	queuesInGuildsCollection.set(msg.guildId, queue);
 }
