@@ -23,7 +23,7 @@ var audioPlayerInGuild = new Map();
 bot.login(token);
 bot.once("ready", () => log("Bot connected"));
 bot.on("messageCreate", msg => messageCreateAndUpdateMethod(msg));
-bot.on("messageUpdate", msg => messageCreateAndUpdateMethod(msg));
+bot.on("messageUpdate", (old_msg, msg) => messageCreateAndUpdateMethod(msg));
 
 function messageCreateAndUpdateMethod(msg)
 {
@@ -68,10 +68,20 @@ function playLocalPlaylist(msg, args)
 	songsList = new Array();
 	fs.readdir(pathToLocalPlaylist, (err, files) => 
 	{
-		if (err) { console.log(err); return; }
+		if (err) { console.log(err); msg.reply("I found nothing. Try other tittle."); return; }
 		if (queuesInGuildsCollection.has(guildID)) songsList = queuesInGuildsCollection.get(guildID);
 		else
 		{
+			let resrc;
+			for (let i = 0; i < files.length; i++)
+			{
+				if(files[i].indexOf(".mp3") > 0) {
+					let pathToSong = pathToLocalPlaylist + '/' + files[i];
+					resrc = DCVoice.createAudioResource(pathToSong);
+					break;
+				}
+				if(i == files.length-1) { msg.reply("I found nothing. Try other tittle."); return; }
+			}
 			songsList.push('off');
 			let player = DCVoice.createAudioPlayer({
 				behaviors: {
@@ -81,21 +91,7 @@ function playLocalPlaylist(msg, args)
 			let connection = DCVoice.getVoiceConnection(guildID);
 			if(!connection) connection = DCVoice.joinVoiceChannel({channelId: msg.member.voice.channelId, guildId: guildID, adapterCreator: msg.channel.guild.voiceAdapterCreator});
 			connection.subscribe(player);
-			log("Going into loop\t" + files.length);
-			for (let i = 0; i < files.length; i++)
-			{
-				log("Playing started... ");
-				if(files[i].indexOf(".mp3") > 0) {
-					let pathToSong = pathToLocalPlaylist + '/' + files[i];
-					//log(pathToSong);
-					let resrc = DCVoice.createAudioResource(pathToSong);
-					log("Playing " + resrc);
-					player.play(resrc);
-					break;
-				}
-			}
-			log("I am out of loop");
-			
+			player.play(resrc);
 		}
 		for (let i = 0; i < files.length; i++)
         {
