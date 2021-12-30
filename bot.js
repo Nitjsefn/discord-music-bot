@@ -19,7 +19,6 @@ var audioPlayerInGuild = new Map();
 		let author = "";
 	}
 }*/
-
 bot.login(token);
 bot.once("ready", () => log("Bot connected"));
 bot.on("messageCreate", msg => messageCreateAndUpdateMethod(msg));
@@ -55,10 +54,20 @@ function leaveVoiceChannel(msg)
 	let connection = DCVoice.getVoiceConnection(msg.guildId);
 	if(!connection) {msg.reply("I am not in the voice channel"); return;}
 	connection.destroy();
+	if(audioPlayerInGuild.has(msg.guildId))
+	{
+		audioPlayerInGuild.get(msg.guildId).stop();
+		audioPlayerInGuild.delete(msg.guildId);
+	}
+	if(queuesInGuildsCollection.has(msg.guildId)) 
+	{
+		queuesInGuildsCollection(msg.guildId).delete();
+	}
 }
 
 function playLocalPlaylist(msg, args)
 {
+	let player;
 	let songsList;
 	let guildID = msg.guildId;
 	let playlistName = args[0];
@@ -83,7 +92,7 @@ function playLocalPlaylist(msg, args)
 				if(i == files.length-1) { msg.reply("I found nothing. Try other tittle."); return; }
 			}
 			songsList.push('off');
-			let player = DCVoice.createAudioPlayer({
+			player = DCVoice.createAudioPlayer({
 				behaviors: {
 					noSubscriber: DCVoice.NoSubscriberBehavior.Pause,
 				},
@@ -95,10 +104,23 @@ function playLocalPlaylist(msg, args)
 		}
 		for (let i = 0; i < files.length; i++)
         {
-            if(files[i].indexOf(".mp3") < 0) return;
+            if(files[i].indexOf(".mp3") < 0) continue;
             songsList.splice(songsList.length-2, 0, pathToLocalPlaylist + '/' + files[i]);
         }
 		if(songsList.length < 2) return;
 		queuesInGuildsCollection.set(guildID, songsList);
+		audioPlayerInGuild.set(guildID, player);
 	});
+}
+
+function skipMusic(msg)
+{
+	if(!queuesInGuildsCollection.has(msg.guildId)) { msg.reply("I am not playing anything!"); return; }
+	let queue = queuesInGuildsCollection.get(msg.guildId);
+	queue = queue.slice(1);
+	if(queue.length < 2) { msg.reply("That was the last song in the queue"); audioPlayerInGuild.get(msg.guildId).stop(); queuesInGuildsCollection.delete(msg.guildId); audioPlayerInGuild.delete(msg.guildId); DCVoice.getVoiceConnection(msg.guildId).destroy(); return; }
+	let rsc = DCVoice.createAudioResource(queue[0]);
+	let player = audioPlayerInGuild.get(msg.guildId);
+	player.play(rsc);
+	queuesInGuildsCollection.set(msg.guildId, queue);
 }
