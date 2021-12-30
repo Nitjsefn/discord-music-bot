@@ -117,6 +117,7 @@ function skipMusic(msg)
 {
 	if(!queuesInGuildsCollection.has(msg.guildId)) { msg.reply("I am not playing anything!"); return; }
 	let queue = queuesInGuildsCollection.get(msg.guildId);
+	if(queue[queue.length-1] === "all") queue.splice(queue.length-2, 0, queue[0]);
 	queue = queue.slice(1);
 	if(queue.length < 2) { msg.reply("That was the last song in the queue"); audioPlayerInGuild.get(msg.guildId).stop(); queuesInGuildsCollection.delete(msg.guildId); audioPlayerInGuild.delete(msg.guildId); DCVoice.getVoiceConnection(msg.guildId).destroy(); return; }
 	let rsc = DCVoice.createAudioResource(queue[0]);
