@@ -62,7 +62,7 @@ function leaveVoiceChannel(msg)
 	}
 	if(queuesInGuildsCollection.has(msg.guildId)) 
 	{
-		queuesInGuildsCollection(msg.guildId).delete();
+		queuesInGuildsCollection.delete(msg.guildId);
 	}
 }
 
@@ -153,4 +153,17 @@ function resumeMusic(msg)
 {
 	if(!audioPlayerInGuild.has(msg.guildId)) {msg.reply("I am not playing anything!"); return;}
 	audioPlayerInGuild.get(msg.guildId).unpause();
+}
+
+function stopMusic(msg)
+{
+	if(!audioPlayerInGuild.has(msg.guildId)) msg.reply("I am not playing anything!");
+	else
+	{
+		audioPlayerInGuild.get(msg.guildId).stop();
+		audioPlayerInGuild.delete(msg.guildId);
+	}
+	if(queuesInGuildsCollection.has(msg.guildId)) queuesInGuildsCollection.delete(msg.guildId);
+	let connection = DCVoice.getVoiceConnection(msg.guildId);
+	if(connection) connection.destroy();
 }
