@@ -148,3 +148,9 @@ function pauseMusic(msg)
 	if(!audioPlayerInGuild.has(msg.guildId)) {msg.reply("I am not playing anything!"); return;}
 	audioPlayerInGuild.get(msg.guildId).pause();
 }
+
+function resumeMusic(msg)
+{
+	if(!audioPlayerInGuild.has(msg.guildId)) {msg.reply("I am not playing anything!"); return;}
+	audioPlayerInGuild.get(msg.guildId).unpause();
+}
