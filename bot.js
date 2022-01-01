@@ -167,3 +167,29 @@ function stopMusic(msg)
 	let connection = DCVoice.getVoiceConnection(msg.guildId);
 	if(connection) connection.destroy();
 }
+
+function removeSong(msg, arguments)
+{
+	let queue = queuesInGuildsCollection.get(msg.guildId);
+	log(queue);
+	if(!queue) { msg.reply("I am not playing anything!"); return; }
+	if(queue.length < 2) 
+	{
+		if(audioPlayerInGuild.has(msg.guildId)) { audioPlayerInGuild.get(msg.guildId).stop(); audioPlayerInGuild.delete(msg.guildId); }
+		queuesInGuildsCollection.delete(msg.guildId);
+		let connection = DCVoice.getVoiceConnection(msg.guildId);
+		if(connection) connection.destroy();
+	}
+	if(queue.length < 3) { msg.reply("There is no song to play in the future!"); return; }
+	let songsToRemove = new Array();
+	arguments.forEach(arg =>
+	{
+		if(arg === "0") { msg.reply("There is no song **0** in the queue!"); return; }
+		songsToRemove.push(parseInt(arg));
+	});
+	songsToRemove.forEach(num =>
+	{
+		if(num > queue.length - 2) { msg.reply(`There is no song **${num}** in the queue!`); return; }
+		queue.splice(num, 1);
+	});
+}
