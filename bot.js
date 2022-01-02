@@ -79,9 +79,10 @@ function playLocalPlaylist(msg, args)
 	fs.readdir(pathToLocalPlaylist, (err, files) => 
 	{
 		if (err) { console.log(err); msg.reply("I found nothing. Try other tittle."); return; }
-		if (queuesInGuildsCollection.has(guildID)) songsList = queuesInGuildsCollection.get(guildID);
+		if (queuesInGuildsCollection.has(guildID)) {log("Old songsList"); songsList = queuesInGuildsCollection.get(guildID);}
 		else
 		{
+			log("This shouldn happen");
 			let resrc;
 			for (let i = 0; i < files.length; i++)
 			{
@@ -102,15 +103,15 @@ function playLocalPlaylist(msg, args)
 			if(!connection) connection = DCVoice.joinVoiceChannel({channelId: msg.member.voice.channelId, guildId: guildID, adapterCreator: msg.channel.guild.voiceAdapterCreator});
 			connection.subscribe(player);
 			player.play(resrc);
+			audioPlayerInGuild.set(guildID, player);
 		}
 		for (let i = 0; i < files.length; i++)
         {
             if(files[i].indexOf(".mp3") < 0) continue;
-            songsList.splice(songsList.length-2, 0, pathToLocalPlaylist + '/' + files[i]);
+            songsList.splice(songsList.length-1, 0, pathToLocalPlaylist + '/' + files[i]);
         }
 		if(songsList.length < 2) return;
 		queuesInGuildsCollection.set(guildID, songsList);
-		audioPlayerInGuild.set(guildID, player);
 	});
 }
 
