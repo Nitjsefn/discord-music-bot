@@ -1,12 +1,13 @@
 //https://www.npmjs.com/package/discord-music-player -> maybe in the future
 const {prefix, token} = require("./bot.json");
-const { Client, Intents, MessageEmbed } = require('discord.js');
+const { Client, Intents, MessageEmbed, MessageAttachment } = require('discord.js');
 const { resourceUsage, listenerCount } = require("process");
 const { resourceLimits } = require("worker_threads");
 const DCVoice = require('@discordjs/voice');
 const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
 const { log } = console;
 const fs = require('fs');
+const mp3meta = require('jsmediatags');
 var queuesInGuildsCollection = new Map();
 const pathToPlaylistsLibrary = process.argv[2];
 var audioPlayerInGuild = new Map();
@@ -14,7 +15,7 @@ var audioPlayerInGuild = new Map();
 {
 	Song()
 	{
-		let tittle = "";
+		let title = "";
 		let path = "";
 		let durationInSec = 0;
 		let author = "";
@@ -79,11 +80,10 @@ function playLocalPlaylist(msg, args)
 	songsList = new Array();
 	fs.readdir(pathToLocalPlaylist, (err, files) => 
 	{
-		if (err) { console.log(err); msg.reply("I found nothing. Try other tittle."); return; }
-		if (queuesInGuildsCollection.has(guildID)) {log("Old songsList"); songsList = queuesInGuildsCollection.get(guildID);}
+		if (err) { console.log(err); msg.reply("I found nothing. Try other title."); return; }
+		if (queuesInGuildsCollection.has(guildID)) songsList = queuesInGuildsCollection.get(guildID);
 		else
 		{
-			log("This shouldn happen");
 			let resrc;
 			for (let i = 0; i < files.length; i++)
 			{
@@ -92,7 +92,7 @@ function playLocalPlaylist(msg, args)
 					resrc = DCVoice.createAudioResource(pathToSong);
 					break;
 				}
-				if(i == files.length-1) { msg.reply("I found nothing. Try other tittle."); return; }
+				if(i == files.length-1) { msg.reply("I found nothing. Try other title."); return; }
 			}
 			songsList.push('off');
 			player = DCVoice.createAudioPlayer({
@@ -173,7 +173,6 @@ function stopMusic(msg)
 function removeSong(msg, arguments)
 {
 	let queue = queuesInGuildsCollection.get(msg.guildId);
-	log(queue);
 	if(!queue) { msg.reply("I am not playing anything!"); return; }
 	if(queue.length < 2) 
 	{
@@ -200,4 +199,19 @@ function displayNowPlayingSong(msg)
 {
 	if(!audioPlayerInGuild.has(msg.guildId)) { msg.reply("I am not playing anything"); return; }
 	if(!queuesInGuildsCollection.has(msg.guildId)) { msg.reply("I am not playing anything"); return; }
+	let queue = queuesInGuildsCollection.get(msg.guildId);
+	let song = queue[0];
+	mp3meta.read(song, { onSuccess: (tag) =>
+		{
+			//msg.reply(`Title: **${tag.tags.title}**\nArtist: *${tag.tags.artist}*`);
+			let file = new MessageAttachment('./src/img/song-icon.png');
+			let embedMsg = new MessageEmbed();
+			embedMsg.setColor('#1cbbb4')
+			embedMsg.setTitle(tag.tags.title)
+			embedMsg.setAuthor(tag.tags.artist)
+			if(tag.tags.album) embedMsg.addField('Album:', `${tag.tags.album}`)
+			embedMsg.setThumbnail('attachment://song-icon.png')
+			msg.channel.send({ embeds: [embedMsg], files: [file] });
+		}
+	});
 }
