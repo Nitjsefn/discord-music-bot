@@ -1,5 +1,6 @@
+//https://www.npmjs.com/package/discord-music-player -> maybe in the future
 const {prefix, token} = require("./bot.json");
-const { Client, Intents } = require('discord.js');
+const { Client, Intents, MessageEmbed } = require('discord.js');
 const { resourceUsage, listenerCount } = require("process");
 const { resourceLimits } = require("worker_threads");
 const DCVoice = require('@discordjs/voice');
@@ -193,4 +194,10 @@ function removeSong(msg, arguments)
 		if(num > queue.length - 2) { msg.reply(`There is no song **${num}** in the queue!`); return; }
 		queue.splice(num, 1);
 	});
+}
+
+function displayNowPlayingSong(msg)
+{
+	if(!audioPlayerInGuild.has(msg.guildId)) { msg.reply("I am not playing anything"); return; }
+	if(!queuesInGuildsCollection.has(msg.guildId)) { msg.reply("I am not playing anything"); return; }
 }
