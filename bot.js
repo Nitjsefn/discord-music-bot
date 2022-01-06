@@ -1,6 +1,6 @@
 //https://www.npmjs.com/package/discord-music-player -> maybe in the future
 const {prefix, token} = require("./bot.json");
-const { Client, Intents, MessageEmbed, MessageAttachment } = require('discord.js');
+const { Client, Intents, MessageEmbed, MessageAttachment, MessageActionRow, MessageButton, Interaction } = require('discord.js');
 const { resourceUsage, listenerCount } = require("process");
 const { resourceLimits } = require("worker_threads");
 const DCVoice = require('@discordjs/voice');
@@ -8,23 +8,29 @@ const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MES
 const { log } = console;
 const fs = require('fs');
 const mp3meta = require('jsmediatags');
+const { findSourceMap } = require("module");
 var queuesInGuildsCollection = new Map();
 const pathToPlaylistsLibrary = process.argv[2];
 var audioPlayerInGuild = new Map();
+var queuePagesCollection = new Map(); //Last indexes are for MessageActionRow, leftButton, rightButton, stopButton, sentMessage, timeoutID <- not sure
+var btnMsgIdInGuild = new Map();
+var BOT_NAME;
 /*class Song
 {
 	Song()
 	{
 		let title = "";
-		let path = "";
-		let durationInSec = 0;
-		let author = "";
+		let artist = "";
+		let album = "";
 	}
 }*/
 bot.login(token);
-bot.once("ready", () => log("Bot connected"));
+bot.once("ready", () => { log("Bot connected"); BOT_NAME = bot.user.username; });
 bot.on("messageCreate", msg => messageCreateAndUpdateMethod(msg));
 bot.on("messageUpdate", (old_msg, msg) => messageCreateAndUpdateMethod(msg));
+bot.on('interactionCreate', interaction => {
+	if(interaction.isButton) reactToButton(interaction);
+});
 
 function messageCreateAndUpdateMethod(msg)
 {
@@ -206,12 +212,228 @@ function displayNowPlayingSong(msg)
 			//msg.reply(`Title: **${tag.tags.title}**\nArtist: *${tag.tags.artist}*`);
 			let file = new MessageAttachment('./src/img/song-icon.png');
 			let embedMsg = new MessageEmbed();
-			embedMsg.setColor('#1cbbb4')
-			embedMsg.setTitle(tag.tags.title)
-			embedMsg.setAuthor(tag.tags.artist)
-			if(tag.tags.album) embedMsg.addField('Album:', `${tag.tags.album}`)
-			embedMsg.setThumbnail('attachment://song-icon.png')
+			embedMsg.setColor('#1cbbb4');
+			if(tag.tags.title) embedMsg.setTitle(tag.tags.title);
+			if(tag.tags.artist) embedMsg.setAuthor(tag.tags.artist);
+			if(tag.tags.album) embedMsg.addField('Album:', `${tag.tags.album}`);
+			embedMsg.setThumbnail('attachment://song-icon.png');
 			msg.channel.send({ embeds: [embedMsg], files: [file] });
 		}
 	});
+}
+
+function displayQueue(msg)
+{
+	if(!queuesInGuildsCollection.has(msg.guildId)) { msg.reply('I am not playing anything!'); return; }
+	let queue = queuesInGuildsCollection.get(msg.guildId);
+	let queuePages = new Array();
+	let onePage = new Array();
+	for(let i = 0; i < queue.length-1; i++)
+	{
+		let song = queue[i];
+		let d = song.length-1;
+		while(song[d] !== '/') d--;
+		d++;
+		song = song.slice(d, -4);
+		song = `**${i+1}.** ${song}`;
+		onePage.push(song);
+		if( ( (i+1)%15 == 0 ) || i == queue.length-2 )
+		{
+			queuePages.push(onePage);
+			onePage = new Array();
+		}
+	}
+	let leftButton = new MessageButton()
+		.setCustomId('lButton')
+		.setLabel('<')
+		.setStyle('PRIMARY')
+		.setDisabled(true);
+	let rightButton = new MessageButton()
+		.setCustomId('rButton')
+		.setLabel('>')
+		.setStyle('PRIMARY');
+		if(queuePages.length < 2) rightButton.setDisabled(true);
+	let stopButton = new MessageButton()
+		.setCustomId('sButton')
+		.setLabel('STOP')
+		.setStyle('DANGER');
+		if(queuePages.length < 2) stopButton.setDisabled(true);
+	let row = new MessageActionRow();
+	row.addComponents(leftButton, rightButton, stopButton);
+	let embedMsg = new MessageEmbed();
+	embedMsg.setColor('#1cbbb4');
+	let firstPage = queuePages[0];
+	let firstPageStr = "";
+	for(let i = 0; i < firstPage.length; i++)
+	{
+		firstPageStr += `${firstPage[i]}\n`;
+	}
+	embedMsg.addField('Queue', firstPageStr);
+	embedMsg.setFooter(`Page:\t1/${queuePages.length}`);
+	let sentMessage = msg.channel.send({ embeds: [embedMsg], components: [row] });
+	if(queuePages.length < 2) return;
+	let timeoutId = setTimeout(() =>
+	{
+		sentMessage.then((m =>
+			{
+				row.setComponents(leftButton.setDisabled(true), rightButton.setDisabled(true), stopButton.setDisabled(true));
+				m.edit({ components: [row] });
+				queuePagesCollection.delete(msg.guildId);
+				btnMsgIdInGuild.delete(msg.guildId)
+			}));
+	}, 60000);
+	//queuePages.push(row);
+	//queuePages.push(leftButton);
+	//queuePages.push(rightButton);
+	//queuePages.push(stopButton);
+	queuePages.push(timeoutId);
+	queuePagesCollection.set(msg.guildId, queuePages);
+	sentMessage.then(m => btnMsgIdInGuild.set(msg.guildId, m.id));
+}
+
+function reactToButton(button)
+{
+	if(button.message.author.username !== BOT_NAME) return;
+	if(!btnMsgIdInGuild.has(button.guildId)) { button.message.reply("This message is not up to date. Generate the new one!"); button.message.edit({ components: [button.message.components[0].setComponents(button.message.components[0].components[0].setDisabled(true), button.message.components[0].components[1].setDisabled(true), button.message.components[0].components[2].setDisabled(true))] }); button.deferUpdate(); return; }
+	let correctMsgId = btnMsgIdInGuild.get(button.guildId);
+	let currentMsgId = button.message.id;
+	if(currentMsgId !== correctMsgId) {button.message.reply("This message is not up to date."); button.message.edit({ components: [button.message.components[0].setComponents(button.message.components[0].components[0].setDisabled(true), button.message.components[0].components[1].setDisabled(true), button.message.components[0].components[2].setDisabled(true))] }); button.deferUpdate(); return;}
+	//Veryfication is complete
+	let queuePages = queuePagesCollection.get(button.guildId);
+	let row = button.message.components[0];
+	let stopButton = row.components[2];
+	let rightButton = row.components[1];
+	let leftButton = row.components[0];
+	let msg = button.message;
+	let timeoutId = queuePages.pop();
+	if(button.customId === 'sButton')
+	{
+		if(!msg.editable)
+		{
+			msg.channel.send("I can't edit this message.");
+			if(msg.deletable)
+			{
+				msg.channel.send("I deleted this message.");
+				msg.delete();
+			}
+			queuePagesCollection.delete(msg.guildId);
+			btnMsgIdInGuild.delete(msg.guildId);
+			clearTimeout(timeoutId);
+			return;
+		}
+		row.setComponents(leftButton.setDisabled(true), rightButton.setDisabled(true), stopButton.setDisabled(true));
+		msg.edit({ components: [row] });
+		queuePagesCollection.delete(msg.guildId);
+		btnMsgIdInGuild.delete(msg.guildId);
+		clearTimeout(timeoutId);
+		button.deferUpdate();
+	}
+	else if(button.customId === 'rButton')
+	{
+		leftButton.setDisabled(false);
+		if(!msg.editable)
+		{
+			msg.channel.send("I can't edit this message.");
+			if(msg.deletable)
+			{
+				msg.channel.send("I deleted this message.");
+				msg.delete();
+			}
+			queuePagesCollection.delete(msg.guildId);
+			btnMsgIdInGuild.delete(msg.guildId);
+			clearTimeout(timeoutId);
+			return;
+		}
+		let pageNumStr = "";
+		let embedMsg = msg.embeds[0];
+		let numOfPages = queuePages.length;
+		for(let i = 6; i < 10; i++)
+		{
+			if(embedMsg.footer.text[i] === "/") break;
+			pageNumStr += embedMsg.footer.text[i];
+		}
+		let pageNum = parseInt(pageNumStr); //Number of current page (1 -> number of pages)
+		if(pageNum == numOfPages-1) //Checking if the next page will be the last one
+		{
+			row.setComponents(leftButton, rightButton.setDisabled(true), stopButton);
+		}
+		else
+		{
+			row.setComponents(leftButton, rightButton.setDisabled(false), stopButton);
+		}
+		let newPage = queuePages[pageNum]; //pageNum from 1 is the index of the next page
+		let newPageStr = "";
+		for(let i = 0; i < newPage.length; i++)
+		{
+			newPageStr += `${newPage[i]}\n`;
+		}
+		embedMsg.fields[0].value = newPageStr;
+		embedMsg.footer.text = `Page:\t${pageNum+1}/${numOfPages}`;
+		msg.edit({ embeds: [embedMsg], components: [row]});
+		clearTimeout(timeoutId);
+		button.deferUpdate();
+		timeoutId = setTimeout(() =>
+		{
+			row.setComponents(leftButton.setDisabled(true), rightButton.setDisabled(true), stopButton.setDisabled(true));
+			msg.edit({ components: [row] });
+			queuePagesCollection.delete(msg.guildId);
+			btnMsgIdInGuild.delete(msg.guildId)
+		}, 60000);
+		queuePages.push(timeoutId);
+		queuePagesCollection.set(msg.guildId, queuePages);
+	}
+	else if(button.customId === 'lButton')
+	{
+		rightButton.setDisabled(false);
+		if(!msg.editable)
+		{
+			msg.channel.send("I can't edit this message.");
+			if(msg.deletable)
+			{
+				msg.channel.send("I deleted this message.");
+				msg.delete();
+			}
+			queuePagesCollection.delete(msg.guildId);
+			btnMsgIdInGuild.delete(msg.guildId);
+			clearTimeout(timeoutId);
+			return;
+		}
+		let pageNumStr = "";
+		let embedMsg = msg.embeds[0];
+		let numOfPages = queuePages.length;
+		for(let i = 6; i < 10; i++)
+		{
+			if(embedMsg.footer.text[i] === "/") break;
+			pageNumStr += embedMsg.footer.text[i];
+		}
+		let pageNum = parseInt(pageNumStr); //Number of current page (1 -> number of pages)
+		if(pageNum == 2) //Checking if the prev page will be the first one
+		{
+			row.setComponents(leftButton.setDisabled(true), rightButton, stopButton);
+		}
+		else
+		{
+			row.setComponents(leftButton.setDisabled(false), rightButton, stopButton);
+		}
+		let newPage = queuePages[pageNum-2]; //pageNum from 1 is greater by 2 than index of previous page
+		let newPageStr = "";
+		for(let i = 0; i < newPage.length; i++)
+		{
+			newPageStr += `${newPage[i]}\n`;
+		}
+		embedMsg.fields[0].value = newPageStr;
+		embedMsg.footer.text = `Page:\t${pageNum-1}/${numOfPages}`;
+		msg.edit({ embeds: [embedMsg], components: [row]});
+		clearTimeout(timeoutId);
+		button.deferUpdate();
+		timeoutId = setTimeout(() =>
+		{
+			row.setComponents(leftButton.setDisabled(true), rightButton.setDisabled(true), stopButton.setDisabled(true));
+			msg.edit({ components: [row] });
+			queuePagesCollection.delete(msg.guildId);
+			btnMsgIdInGuild.delete(msg.guildId)
+		}, 60000);
+		queuePages.push(timeoutId);
+		queuePagesCollection.set(msg.guildId, queuePages);
+	}
 }
