@@ -76,6 +76,8 @@ function leaveVoiceChannel(msg)
 
 function playLocalPlaylist(msg, args)
 {
+	if(!msg.member.voice.channelId) { msg.reply("You are not in voice channel"); return; }
+	if(!msg.member.voice.channel.joinable) { msg.reply("I can't join to your voice channel"); return; }
 	let player;
 	let songsList;
 	let guildID = msg.guildId;
