@@ -1,6 +1,6 @@
 //https://www.npmjs.com/package/discord-music-player -> maybe in the future
 const {prefix, token} = require("./bot.json");
-const { Client, Intents, MessageEmbed, MessageAttachment, MessageActionRow, MessageButton, Interaction } = require('discord.js');
+const { Client, Intents, MessageEmbed, MessageAttachment, MessageActionRow, MessageButton } = require('discord.js');
 const { resourceUsage, listenerCount } = require("process");
 const { resourceLimits } = require("worker_threads");
 const DCVoice = require('@discordjs/voice');
@@ -52,7 +52,14 @@ function messageCreateAndUpdateMethod(msg)
 		case "np": displayNowPlayingSong(msg); break;
 		case "queue": displayQueue(msg); break;
 		case "search": searchForMusic(msg, arguments); break;
-		case "join": DCVoice.joinVoiceChannel({channelId: msg.member.voice.channelId, guildId: msg.guildId, adapterCreator: msg.channel.guild.voiceAdapterCreator}); break;
+		case "join": DCVoice.joinVoiceChannel({channelId: msg.member.voice.channelId, guildId: msg.guildId, adapterCreator: msg.channel.guild.voiceAdapterCreator}).on(DCVoice.VoiceConnectionStatus.Disconnected, (oldState, newState) =>
+					{
+						if(audioPlayerInGuild.has(msg.guildId)) { audioPlayerInGuild.get(msg.guildId).stop(); audioPlayerInGuild.delete(msg.guildId); }
+						if(queuesInGuildsCollection.has(msg.guildId)) queuesInGuildsCollection.delete(msg.guildId);
+						let conn = DCVoice.getVoiceConnection(msg.guildId);
+						if(!conn) { msg.reply("I am not in the voice channel!"); return; }
+						conn.destroy();
+					}); break;
 		case "repeat": changeRepeatStatus(msg, arguments); break;
 		default: msg.reply("Wrong command!"); break;
 	}
@@ -111,7 +118,18 @@ function playLocalPlaylist(msg, args)
 				},
 			});
 			let connection = DCVoice.getVoiceConnection(guildID);
-			if(!connection) connection = DCVoice.joinVoiceChannel({channelId: msg.member.voice.channelId, guildId: guildID, adapterCreator: msg.channel.guild.voiceAdapterCreator});
+			if(!connection) 
+			{
+				connection = DCVoice.joinVoiceChannel({channelId: msg.member.voice.channelId, guildId: guildID, adapterCreator: msg.channel.guild.voiceAdapterCreator});
+				connection.on(DCVoice.VoiceConnectionStatus.Disconnected, (oldState, newState) =>
+				{
+					if(audioPlayerInGuild.has(msg.guildId)) { audioPlayerInGuild.get(msg.guildId).stop(); audioPlayerInGuild.delete(msg.guildId); }
+					if(queuesInGuildsCollection.has(msg.guildId)) queuesInGuildsCollection.delete(msg.guildId);
+					let conn = DCVoice.getVoiceConnection(msg.guildId);
+					if(!connection) { msg.reply("I am not in the voice channel!"); return; }
+					conn.destroy();
+				});
+			}
 			connection.subscribe(player);
 			let d = firstSong.length-1;
 			while(firstSong[d] !== '/') d--;
