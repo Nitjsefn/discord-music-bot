@@ -92,12 +92,14 @@ function playLocalPlaylist(msg, args)
 		if (queuesInGuildsCollection.has(guildID)) songsList = queuesInGuildsCollection.get(guildID);
 		else
 		{
+			let firstSong;
 			let resrc;
 			for (let i = 0; i < files.length; i++)
 			{
 				if(files[i].indexOf(".mp3") > 0) {
 					let pathToSong = pathToLocalPlaylist + '/' + files[i];
 					resrc = DCVoice.createAudioResource(pathToSong);
+					firstSong = pathToSong;
 					break;
 				}
 				if(i == files.length-1) { msg.reply("I found nothing. Try other title."); return; }
@@ -111,7 +113,33 @@ function playLocalPlaylist(msg, args)
 			let connection = DCVoice.getVoiceConnection(guildID);
 			if(!connection) connection = DCVoice.joinVoiceChannel({channelId: msg.member.voice.channelId, guildId: guildID, adapterCreator: msg.channel.guild.voiceAdapterCreator});
 			connection.subscribe(player);
+			let d = firstSong.length-1;
+			while(firstSong[d] !== '/') d--;
+			d++;
+			firstSong = firstSong.slice(d, -4);
 			player.play(resrc);
+			msg.reply(`Now playing:\t**${firstSong}**\nIf you want more information use \`>np\` command.`);
+			player.addListener("stateChange", (oldOne, newOne) =>
+			{
+				if (newOne.status == "idle")
+				{
+					if(!queuesInGuildsCollection.has(msg.guildId)) { msg.reply("I am not playing anything!"); return; }
+					let queue = queuesInGuildsCollection.get(msg.guildId);
+					if(queue[queue.length-1] === "all") queue.splice(queue.length-1, 0, queue[0]);
+					if(queue[queue.length-1] !== "one") queue = queue.slice(1);
+					if(queue.length < 2) { msg.reply("That was the last song in the queue!"); audioPlayerInGuild.get(msg.guildId).stop(); queuesInGuildsCollection.delete(msg.guildId); audioPlayerInGuild.delete(msg.guildId); DCVoice.getVoiceConnection(msg.guildId).destroy(); return; }
+					let rsc = DCVoice.createAudioResource(queue[0]);
+					let player = audioPlayerInGuild.get(msg.guildId);
+					player.play(rsc);
+					queuesInGuildsCollection.set(msg.guildId, queue);
+					let song = queue[0];
+					let d = song.length-1;
+					while(song[d] !== '/') d--;
+					d++;
+					song = song.slice(d, -4);
+					msg.channel.send(`Now playing:\t**${song}**\nIf you want more information use \`>np\` command.`);
+				}
+			});
 			audioPlayerInGuild.set(guildID, player);
 		}
 		for (let i = 0; i < files.length; i++)
@@ -128,7 +156,7 @@ function skipMusic(msg)
 {
 	if(!queuesInGuildsCollection.has(msg.guildId)) { msg.reply("I am not playing anything!"); return; }
 	let queue = queuesInGuildsCollection.get(msg.guildId);
-	if(queue[queue.length-1] === "all") queue.splice(queue.length-2, 0, queue[0]);
+	if(queue[queue.length-1] === "all") queue.splice(queue.length-1, 0, queue[0]);
 	queue = queue.slice(1);
 	if(queue.length < 2) { msg.reply("That was the last song in the queue!"); audioPlayerInGuild.get(msg.guildId).stop(); queuesInGuildsCollection.delete(msg.guildId); audioPlayerInGuild.delete(msg.guildId); DCVoice.getVoiceConnection(msg.guildId).destroy(); return; }
 	let rsc = DCVoice.createAudioResource(queue[0]);
