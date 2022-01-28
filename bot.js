@@ -485,3 +485,74 @@ function reactToButton(button)
 		queuePagesCollection.set(msg.guildId, queuePages);
 	}
 }
+
+function playLocal(msg, args)
+{
+	if(!msg.member.voice.channelId) { msg.reply("You are not in voice channel"); return; }
+	if(!msg.member.voice.channel.joinable) { msg.reply("I can't join to your voice channel"); return; }
+	if(args.length == 0) { msg.reply("You didn't write the title of song"); return; }
+	let songName = '';
+	for(let i = 0; i < args.length; i++) songName += args[i];
+	let songsList = new Array();
+	let song;
+	let player;
+	song = search(pathToPlaylistsLibrary, songName, false, '.mp3', true)[0];
+	let pathToSong = song;
+	if (queuesInGuildsCollection.has(msg.guildId)) songsList = queuesInGuildsCollection.get(msg.guildId);
+	else
+	{
+		if(!song) { msg.reply("I found nothing. Try other title>pl."); return; }
+		let resrc = DCVoice.createAudioResource(song);
+		songsList.push('off');
+		player = DCVoice.createAudioPlayer({
+			behaviors: {
+				noSubscriber: DCVoice.NoSubscriberBehavior.Pause,
+			},
+		});
+		let connection = DCVoice.getVoiceConnection(msg.guildId);
+		if(!connection) 
+		{
+			connection = DCVoice.joinVoiceChannel({channelId: msg.member.voice.channelId, guildId: msg.guildId, adapterCreator: msg.channel.guild.voiceAdapterCreator});
+			connection.on(DCVoice.VoiceConnectionStatus.Disconnected, (oldState, newState) =>
+			{
+				if(audioPlayerInGuild.has(msg.guildId)) { audioPlayerInGuild.get(msg.guildId).stop(); audioPlayerInGuild.delete(msg.guildId); }
+				if(queuesInGuildsCollection.has(msg.guildId)) queuesInGuildsCollection.delete(msg.guildId);
+				let conn = DCVoice.getVoiceConnection(msg.guildId);
+				if(!connection) { msg.reply("I am not in the voice channel!"); return; }
+				conn.destroy();
+			});
+		}
+		connection.subscribe(player);
+		let d = song.length-1;
+		while(song[d] !== '/') d--;
+		d++;
+		song = song.slice(d, -4);
+		player.play(resrc);
+		msg.reply(`Now playing:\t**${song}**\nIf you want more information use \`>np\` command.`);
+		player.addListener("stateChange", (oldOne, newOne) =>
+		{
+			if (newOne.status == "idle")
+			{
+				if(!queuesInGuildsCollection.has(msg.guildId)) { msg.reply("I am not playing anything!"); return; }
+				let queue = queuesInGuildsCollection.get(msg.guildId);
+				if(queue[queue.length-1] === "all") queue.splice(queue.length-1, 0, queue[0]);
+				if(queue[queue.length-1] !== "one") queue = queue.slice(1);
+				if(queue.length < 2) { msg.reply("That was the last song in the queue!"); audioPlayerInGuild.get(msg.guildId).stop(); queuesInGuildsCollection.delete(msg.guildId); audioPlayerInGuild.delete(msg.guildId); DCVoice.getVoiceConnection(msg.guildId).destroy(); return; }
+				let rsc = DCVoice.createAudioResource(queue[0]);
+				let player = audioPlayerInGuild.get(msg.guildId);
+				player.play(rsc);
+				queuesInGuildsCollection.set(msg.guildId, queue);
+				let song = queue[0];
+				let d = song.length-1;
+				while(song[d] !== '/') d--;
+				d++;
+				song = song.slice(d, -4);
+				msg.channel.send(`Now playing:\t**${song}**\nIf you want more information use \`>np\` command.`);
+			}
+		});
+		audioPlayerInGuild.set(msg.guildId, player);
+	}
+	songsList.splice(songsList.length-1, 0, pathToSong);
+	if(songsList.length < 2) return;
+	queuesInGuildsCollection.set(msg.guildId, songsList);
+}

@@ -6,6 +6,7 @@ var listToOrder = new Array();
 //var firstMovableIndex = 0;
 function search(pathToLibrary = '', requestedFIle = '', wantDirectory = false, suffix = '', fullSearch = false)
 {
+    listToOrder = [];
     if(!pathToLibrary.endsWith('/')) pathToLibrary += '/';
     if(!fullSearch)
     {
