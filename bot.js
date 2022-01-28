@@ -88,14 +88,17 @@ function playLocalPlaylist(msg, args)
 	let player;
 	let songsList;
 	let guildID = msg.guildId;
-	let playlistName = args[0];
-	let defPath = pathToPlaylistsLibrary;
-	if (!(defPath[defPath.length - 1] === '/' || defPath[defPath.length - 1] === '\\')) defPath += '/'; //Add searching for playlist name, where u could find out if this is only name or full directory, which will return full path to this dir
-	let pathToLocalPlaylist = defPath + playlistName;
+	let playlistName = '';
+	for(let i = 0; i < args.length; i++) playlistName += `${args[i]} `;
+	//let defPath = pathToPlaylistsLibrary;
+	//if (!(defPath[defPath.length - 1] === '/' || defPath[defPath.length - 1] === '\\')) defPath += '/'; //Add searching for playlist name, where u could find out if this is only name or full directory, which will return full path to this dir
+	//let pathToLocalPlaylist = defPath + playlistName;
+	let pathToLocalPlaylist = search(pathToPlaylistsLibrary, playlistName, true, '', true)[0];
 	songsList = new Array();
 	fs.readdir(pathToLocalPlaylist, (err, files) => 
 	{
 		if (err) { console.log(err); msg.reply("I found nothing. Try other title."); return; }
+		if(files.length == 0) { msg.reply("I found nothing. Try other title."); return; }
 		if (queuesInGuildsCollection.has(guildID)) songsList = queuesInGuildsCollection.get(guildID);
 		else
 		{
@@ -492,7 +495,7 @@ function playLocal(msg, args)
 	if(!msg.member.voice.channel.joinable) { msg.reply("I can't join to your voice channel"); return; }
 	if(args.length == 0) { msg.reply("You didn't write the title of song"); return; }
 	let songName = '';
-	for(let i = 0; i < args.length; i++) songName += args[i];
+	for(let i = 0; i < args.length; i++) songName += `${args[i]} `;
 	let songsList = new Array();
 	let song;
 	let player;
