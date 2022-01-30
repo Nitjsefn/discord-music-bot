@@ -14,6 +14,8 @@ const pathToPlaylistsLibrary = process.argv[2];
 var audioPlayerInGuild = new Map();
 var queuePagesCollection = new Map(); //Last indexes are for MessageActionRow, leftButton, rightButton, stopButton, sentMessage, timeoutID <- not sure
 var btnMsgIdInGuild = new Map();
+var searchResultInGuild = new Map();
+var searchResultInGuild_path = new Map();
 var BOT_NAME;
 /*class Song
 {
@@ -35,6 +37,7 @@ bot.on('interactionCreate', interaction => {
 function messageCreateAndUpdateMethod(msg)
 {
 	if(msg.author.isBot) return;
+	checkForSearchInteraction(msg);
 	if(msg.content[0] != prefix) return;
 	let arguments = msg.content.split(' ');
 	arguments[0] = arguments[0].slice(1);
@@ -93,7 +96,7 @@ function playLocalPlaylist(msg, args)
 	//let defPath = pathToPlaylistsLibrary;
 	//if (!(defPath[defPath.length - 1] === '/' || defPath[defPath.length - 1] === '\\')) defPath += '/'; //Add searching for playlist name, where u could find out if this is only name or full directory, which will return full path to this dir
 	//let pathToLocalPlaylist = defPath + playlistName;
-	let pathToLocalPlaylist = search(pathToPlaylistsLibrary, playlistName, true, '', true)[0];
+	let pathToLocalPlaylist = search(pathToPlaylistsLibrary, playlistName.trim(), true, '', true)[0];
 	songsList = new Array();
 	fs.readdir(pathToLocalPlaylist, (err, files) => 
 	{
@@ -499,12 +502,12 @@ function playLocal(msg, args)
 	let songsList = new Array();
 	let song;
 	let player;
-	song = search(pathToPlaylistsLibrary, songName, false, '.mp3', true)[0];
+	song = search(pathToPlaylistsLibrary, songName.trim(), false, '.mp3', true)[0];
 	let pathToSong = song;
 	if (queuesInGuildsCollection.has(msg.guildId)) songsList = queuesInGuildsCollection.get(msg.guildId);
 	else
 	{
-		if(!song) { msg.reply("I found nothing. Try other title>pl."); return; }
+		if(!song) { msg.reply("I found nothing. Try other title."); return; }
 		let resrc = DCVoice.createAudioResource(song);
 		songsList.push('off');
 		player = DCVoice.createAudioPlayer({
@@ -558,4 +561,157 @@ function playLocal(msg, args)
 	songsList.splice(songsList.length-1, 0, pathToSong);
 	if(songsList.length < 2) return;
 	queuesInGuildsCollection.set(msg.guildId, songsList);
+}
+
+function searchForMusic(msg, args)
+{
+	if(!msg.member.voice.channelId) { msg.reply("You are not in voice channel"); return; }
+	if(!msg.member.voice.channel.joinable) { msg.reply("I can't join to your voice channel"); return; }
+	if(args.length == 0) { msg.reply("You didn't write the title of song"); return; }
+	let songName = '';
+	for(let i = 0; i < args.length; i++) songName += `${args[i]} `;
+	songName = songName.trim();
+	let songsList = new Array();
+	songsList = search(pathToPlaylistsLibrary, songName, false, '.mp3', true);
+	if(songsList.length == 0) { msg.reply("I found nothing. Try other title."); return; }
+	let embedText = '';
+	let embedTextPages = new Array();
+	for(let i = 0; i < songsList.length; i++)
+	{
+		let song = songsList[i];
+		let d = song.length-1;
+		while(song[d] !== '/') d--;
+		let c = d-1;
+		while(song[c] !== '/') c--;
+		let playlistName = song.slice(c+1, d)
+		d++;
+		song = song.slice(d, -4);
+		if(embedText.length + (''+(i+1)).length + song.length + playlistName.length +18  > 1023) 
+		{
+			embedTextPages.push(embedText);
+			embedText = '';
+		}
+		embedText += `**${i+1}.** ${song} \`->\` ${playlistName}\n`;
+	}
+	embedTextPages.push(embedText);
+	let embedMsg = new MessageEmbed();
+	embedMsg.setColor('#1cbbb4');
+	embedMsg.addField('Found:', embedTextPages[0]);
+	embedMsg.setFooter(`Page: 1/${embedTextPages.length}`);
+	embedMsg.setDescription('Type number of song you want me to play, or type \`p\` before number to change page.');
+	let sentMsg = msg.channel.send({ embeds: [embedMsg]});
+	embedTextPages.unshift(sentMsg);
+	let key = '' + msg.guildId + msg.author.id;
+	searchResultInGuild.set(key, embedTextPages);
+	searchResultInGuild_path.set(key, songsList);
+}
+
+function checkForSearchInteraction(msg)
+{
+	let key = '' + msg.guildId + msg.author.id;
+	if(!searchResultInGuild.has(key)) return;
+	for(let i = 0; i < msg.content.length; i++)
+	{
+		if(i == 0 && msg.content[i].toLowerCase() === 'p') continue;
+		if(msg.content[i].charCodeAt(0) < 48 || msg.content[i].charCodeAt(0) > 57)
+		{
+			msg.reply('Search canceled');
+			searchResultInGuild.delete(key);
+			searchResultInGuild_path.delete(key)
+			return;
+		}
+	}
+	let embedTextPages = Array.from(searchResultInGuild.get(key));
+	let sentMsg = embedTextPages.shift();
+	if(msg.content[0] === 'p')
+	{
+		if(msg.content.length < 2) { msg.reply('You didn\'t type page\'s number.'); return; }
+		let requestedPage = parseInt(msg.content.slice(1)) - 1;
+		if(requestedPage + 1 > embedTextPages.length) { msg.reply(`Your requested page is too high. Try one more time.`); return; }
+		if(requestedPage < 0) { msg.reply(`Your requested page is too low. Try one more time.`); return; }
+		sentMsg.then((sentM) =>
+		{
+			if(!sentM.editable) return;
+			let embedMsg = new MessageEmbed();
+			embedMsg.setColor('#1cbbb4');
+			embedMsg.addField('Found:', embedTextPages[requestedPage]);
+			embedMsg.setFooter(`Page: ${requestedPage+1}/${embedTextPages.length}`);
+			embedMsg.setDescription('Type number of song you want me to play, or type \`p\` before number to change page.');
+			sentM.edit({ embeds: [embedMsg] });
+		});
+		return;
+	}
+	else
+	{
+		let songsPaths = searchResultInGuild_path.get(key);
+		let requestedSong = parseInt(msg.content) - 1;
+		if(requestedSong < 0) { msg.reply('Your chosen number is too low. Try again.'); return; }
+		if(requestedSong + 1 > songsPaths.length) { msg.reply('Your chosen number is too high. Try again.'); return; }
+		let pathToSong = songsPaths[requestedSong];
+		let song = pathToSong;
+		let songsList = new Array();
+		let player;
+		if(!msg.member.voice.channelId) { msg.reply("You are not in voice channel"); return; }
+		if(!msg.member.voice.channel.joinable) { msg.reply("I can't join to your voice channel"); return; }
+		if (queuesInGuildsCollection.has(msg.guildId)) songsList = queuesInGuildsCollection.get(msg.guildId);
+		else
+		{
+			if(!song) { msg.reply("I found nothing. Try other title."); return; }
+			let resrc = DCVoice.createAudioResource(song);
+			songsList.push('off');
+			player = DCVoice.createAudioPlayer({
+				behaviors: {
+					noSubscriber: DCVoice.NoSubscriberBehavior.Pause,
+				},
+			});
+			let connection = DCVoice.getVoiceConnection(msg.guildId);
+			if(!connection) 
+			{
+				connection = DCVoice.joinVoiceChannel({channelId: msg.member.voice.channelId, guildId: msg.guildId, adapterCreator: msg.channel.guild.voiceAdapterCreator});
+				connection.on(DCVoice.VoiceConnectionStatus.Disconnected, (oldState, newState) =>
+				{
+					if(audioPlayerInGuild.has(msg.guildId)) { audioPlayerInGuild.get(msg.guildId).stop(); audioPlayerInGuild.delete(msg.guildId); }
+					if(queuesInGuildsCollection.has(msg.guildId)) queuesInGuildsCollection.delete(msg.guildId);
+					let conn = DCVoice.getVoiceConnection(msg.guildId);
+					if(!connection) { msg.reply("I am not in the voice channel!"); return; }
+					conn.destroy();
+				});
+			}
+			connection.subscribe(player);
+			let d = song.length-1;
+			while(song[d] !== '/') d--;
+			d++;
+			song = song.slice(d, -4);
+			player.play(resrc);
+			msg.reply(`Now playing:\t**${song}**\nIf you want more information use \`>np\` command.`);
+			player.addListener("stateChange", (oldOne, newOne) =>
+			{
+				if (newOne.status == "idle")
+				{
+					if(!queuesInGuildsCollection.has(msg.guildId)) { msg.reply("I am not playing anything!"); return; }
+					let queue = queuesInGuildsCollection.get(msg.guildId);
+					if(queue[queue.length-1] === "all") queue.splice(queue.length-1, 0, queue[0]);
+					if(queue[queue.length-1] !== "one") queue = queue.slice(1);
+					if(queue.length < 2) { msg.reply("That was the last song in the queue!"); audioPlayerInGuild.get(msg.guildId).stop(); queuesInGuildsCollection.delete(msg.guildId); audioPlayerInGuild.delete(msg.guildId); DCVoice.getVoiceConnection(msg.guildId).destroy(); return; }
+					let rsc = DCVoice.createAudioResource(queue[0]);
+					let player = audioPlayerInGuild.get(msg.guildId);
+					player.play(rsc);
+					queuesInGuildsCollection.set(msg.guildId, queue);
+					let song = queue[0];
+					let d = song.length-1;
+					while(song[d] !== '/') d--;
+					d++;
+					song = song.slice(d, -4);
+					msg.channel.send(`Now playing:\t**${song}**\nIf you want more information use \`>np\` command.`);
+				}
+			});
+			audioPlayerInGuild.set(msg.guildId, player);
+		}
+		songsList.splice(songsList.length-1, 0, pathToSong);
+		if(songsList.length < 2) return;
+		queuesInGuildsCollection.set(msg.guildId, songsList);
+		searchResultInGuild_path.delete(key);
+		searchResultInGuild.delete(key);
+	}
+
 }
