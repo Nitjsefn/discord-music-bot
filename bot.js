@@ -102,7 +102,19 @@ function playLocalPlaylist(msg, args)
 	fs.readdir(pathToLocalPlaylist, (err, files) => 
 	{
 		if (err) { console.log(err); msg.reply("I found nothing. Try other title."); return; }
-		if(files.length == 0) { msg.reply("I found nothing. Try other title."); return; }
+		if(files.length == 0) { msg.reply("I found nothing inside playlist. Try other title."); return; }
+		let numOfSongs = 0;
+		for(let i = 0; i < files.length; i++)
+		{
+			if(files[i].endsWith('.mp3')) numOfSongs++;
+		}
+		if(numOfSongs > 0)
+		{
+			let c = pathToLocalPlaylist.length-1;
+			while(pathToLocalPlaylist[c] !== '/') c--;
+			c++;
+			msg.reply(`Added ${numOfSongs} song(s) to queue from: **${pathToLocalPlaylist.slice(c)}**\nIf you want to see whole queue use \`>queue\` command.`);
+		}
 		if (queuesInGuildsCollection.has(guildID)) songsList = queuesInGuildsCollection.get(guildID);
 		else
 		{
@@ -116,7 +128,7 @@ function playLocalPlaylist(msg, args)
 					firstSong = pathToSong;
 					break;
 				}
-				if(i == files.length-1) { msg.reply("I found nothing. Try other title."); return; }
+				if(i == files.length-1) { msg.reply("I found nothing inside playlist. Try other title."); return; }
 			}
 			songsList.push('off');
 			player = DCVoice.createAudioPlayer({
@@ -143,10 +155,6 @@ function playLocalPlaylist(msg, args)
 			d++;
 			firstSong = firstSong.slice(d, -4);
 			player.play(resrc);
-			d = pathToLocalPlaylist.length-1;
-			while(pathToLocalPlaylist[d] !== '/') d--;
-			d++;
-			msg.reply(`Added playlist to queue: **${pathToLocalPlaylist.slice(d)}**`);
 			msg.reply(`Now playing:\t**${firstSong}**\nIf you want more information use \`>np\` command.`);
 			player.addListener("stateChange", (oldOne, newOne) =>
 			{
@@ -173,10 +181,10 @@ function playLocalPlaylist(msg, args)
 		}
 		for (let i = 0; i < files.length; i++)
         {
-            if(files[i].indexOf(".mp3") < 0) continue;
+            if(!files[i].endsWith(".mp3")) continue;
             songsList.splice(songsList.length-1, 0, pathToLocalPlaylist + '/' + files[i]);
         }
-		if(songsList.length < 2) return;
+		if(songsList.length < 2) { msg.reply('I found nothing inside playlist. Try other title.'); return; }
 		queuesInGuildsCollection.set(guildID, songsList);
 	});
 }
@@ -510,7 +518,14 @@ function playLocal(msg, args)
 	song = search(pathToPlaylistsLibrary, songName.trim(), false, '.mp3', true)[0];
 	let pathToSong = song;
 	if(!song) { msg.reply("I found nothing. Try other title."); return; }
-	if (queuesInGuildsCollection.has(msg.guildId)) songsList = queuesInGuildsCollection.get(msg.guildId);
+	if (queuesInGuildsCollection.has(msg.guildId)) 
+	{
+		songsList = queuesInGuildsCollection.get(msg.guildId);
+		let c = pathToSong.length-1;
+		while(pathToSong[c] !== '/') c--;
+		c++;
+		msg.reply(`Added song to queue: **${pathToSong.slice(c, -4)}**\nIf you want to see whole queue use \`>queue\` command.`);
+	}
 	else
 	{
 		if(!song) { msg.reply("I found nothing. Try other title."); return; }
@@ -680,7 +695,14 @@ function checkForSearchInteraction(msg)
 		let player;
 		if(!msg.member.voice.channelId) { msg.reply("You are not in voice channel"); return; }
 		if(!msg.member.voice.channel.joinable) { msg.reply("I can't join to your voice channel"); return; }
-		if (queuesInGuildsCollection.has(msg.guildId)) songsList = queuesInGuildsCollection.get(msg.guildId);
+		if (queuesInGuildsCollection.has(msg.guildId))
+		{
+			songsList = queuesInGuildsCollection.get(msg.guildId);
+			let c = pathToSong.length-1;
+			while(pathToSong[c] !== '/') c--;
+			c++;
+			msg.reply(`Added song to queue: **${pathToSong.slice(c, -4)}**\nIf you want to see whole queue use \`>queue\` command.`);
+		}
 		else
 		{
 			if(!song) { msg.reply("I found nothing. Try other title."); return; }
