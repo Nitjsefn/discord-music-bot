@@ -200,7 +200,10 @@ function skipMusic(msg)
 	let player = audioPlayerInGuild.get(msg.guildId);
 	player.play(rsc);
 	queuesInGuildsCollection.set(msg.guildId, queue);
-	msg.reply("Skipped song!");
+	let c = queue[0].length-1;
+	while(queue[0][c] !== '/') c--;
+	c++;
+	msg.reply(`Skipped song to: **${queue[0].slice(c, -4)}**`);
 }
 
 function changeRepeatStatus(msg, args)
