@@ -625,7 +625,28 @@ function checkForSearchInteraction(msg)
 	let sentMsg = embedTextPages.shift();
 	if(msg.content[0] === 'p')
 	{
-		if(msg.content.length < 2) { msg.reply('You didn\'t type page\'s number.'); return; }
+		if(msg.content.length < 2) 
+		{
+			if(embedTextPages.length == 1) { msg.reply('There is only one page.'); return; }
+			sentMsg.then(m =>
+				{
+					if(!m.editable) return;
+					let currentPage_str = m.embeds[0].footer.text;
+					currentPage_str = currentPage_str.slice(5)
+					let d = 0;
+					while(currentPage_str[d] !== '/') d++;
+					currentPage_str = currentPage_str.slice(0, d)
+					let currentPage = parseInt(currentPage_str);
+					if(currentPage == embedTextPages.length) { msg.reply('That was the last page.'); return; }
+					let embedMsg = new MessageEmbed();
+					embedMsg.setColor('#1cbbb4');
+					embedMsg.addField('Found:', embedTextPages[currentPage]);
+					embedMsg.setFooter(`Page: ${currentPage+1}/${embedTextPages.length}`);
+					embedMsg.setDescription('Type number of song you want me to play, or type \`p\` before number to change page.');
+					m.edit({ embeds: [embedMsg] });
+				});
+			return;
+		}
 		let requestedPage = parseInt(msg.content.slice(1)) - 1;
 		if(requestedPage + 1 > embedTextPages.length) { msg.reply(`Your requested page is too high. Try one more time.`); return; }
 		if(requestedPage < 0) { msg.reply(`Your requested page is too low. Try one more time.`); return; }
