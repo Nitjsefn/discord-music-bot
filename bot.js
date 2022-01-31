@@ -303,6 +303,7 @@ function displayQueue(msg)
 		d++;
 		song = song.slice(d, -4);
 		song = `**${i+1}.** ${song}`;
+		if(i == 0) song += '\`<- NOW PLAYING\`';
 		onePage.push(song);
 		if( ( (i+1)%15 == 0 ) || i == queue.length-2 )
 		{
