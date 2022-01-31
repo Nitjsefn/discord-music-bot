@@ -97,6 +97,7 @@ function playLocalPlaylist(msg, args)
 	//if (!(defPath[defPath.length - 1] === '/' || defPath[defPath.length - 1] === '\\')) defPath += '/'; //Add searching for playlist name, where u could find out if this is only name or full directory, which will return full path to this dir
 	//let pathToLocalPlaylist = defPath + playlistName;
 	let pathToLocalPlaylist = search(pathToPlaylistsLibrary, playlistName.trim(), true, '', true)[0];
+	if(!pathToLocalPlaylist) { msg.reply("I found nothing. Try other title."); return; }
 	songsList = new Array();
 	fs.readdir(pathToLocalPlaylist, (err, files) => 
 	{
@@ -142,6 +143,10 @@ function playLocalPlaylist(msg, args)
 			d++;
 			firstSong = firstSong.slice(d, -4);
 			player.play(resrc);
+			d = pathToLocalPlaylist.length-1;
+			while(pathToLocalPlaylist[d] !== '/') d--;
+			d++;
+			msg.reply(`Added playlist to queue: **${pathToLocalPlaylist.slice(d)}**`);
 			msg.reply(`Now playing:\t**${firstSong}**\nIf you want more information use \`>np\` command.`);
 			player.addListener("stateChange", (oldOne, newOne) =>
 			{
@@ -504,6 +509,7 @@ function playLocal(msg, args)
 	let player;
 	song = search(pathToPlaylistsLibrary, songName.trim(), false, '.mp3', true)[0];
 	let pathToSong = song;
+	if(!song) { msg.reply("I found nothing. Try other title."); return; }
 	if (queuesInGuildsCollection.has(msg.guildId)) songsList = queuesInGuildsCollection.get(msg.guildId);
 	else
 	{
