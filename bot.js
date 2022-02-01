@@ -64,6 +64,7 @@ function messageCreateAndUpdateMethod(msg)
 						conn.destroy();
 					}); break;
 		case "repeat": changeRepeatStatus(msg, arguments); break;
+		case "help": sendHelpMessage(msg); break;
 		default: msg.reply("Wrong command!"); break;
 	}
 }
@@ -781,4 +782,13 @@ function checkForSearchInteraction(msg)
 		searchResultInGuild.delete(key);
 	}
 
+}
+
+function sendHelpMessage(msg)
+{
+	let embedMsg = new MessageEmbed()
+		.setTitle('Guide')
+		.setDescription(`To use command you have to add prefix \`${prefix}\` before it. You can use upper and lower case letters as well. Some commands requires arguments.`)
+		.addField('Commands', `\`pl\` - Plays song from local files found by given name -> e.g. *\`${prefix}pl believer\`*\n\`pld\` - Plays playlist from local files found by given name -> e.g. *\`${prefix}pld Imagine Dragons\`*\n\`skip\` - Skips to the next song in the queue -> e.g. *\`${prefix}skip\`*\n\`pause\` - Pauses currently playing song -> e.g. *\`${prefix}pause\`*\n\`stop\` - Stops playing song and leaving voice channel -> e.g. *\`${prefix}stop\`*\n\`resume\` - Resumes paused song -> e.g. *\`${prefix}resume\`*\n\`leave\` - Leaves voice channel and stops playing music -> e.g. *\`${prefix}leave\`*\n\`remove\` - Removes songs given by number from queue -> e.g. *\`${prefix}remove 2 4 15\`*\n\`np\` - Displays informations about currently playing song -> e.g. *\`${prefix}np\`*\n\`queue\` - Displays songs in the queue. Can be used to see numbers of songs to remove -> e.g. *\`${prefix}queue\`*\n\`search\` - Searches for music in local files -> e.g. *\`${prefix}search beliver\`*\n\`join\` - Joins voice channel, that user is currently in -> e.g. *\`${prefix}join\`*\n\`repeat\` - Changes repeat status [all, one, off]. For default: off -> e.g. *\`${prefix}repeat all\`*\n`);
+	msg.channel.send({ embeds: [embedMsg] });
 }
