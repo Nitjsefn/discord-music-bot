@@ -263,8 +263,17 @@ function removeSong(msg, arguments)
 	{
 		if(arg === "0") { msg.reply("There is no song **0** in the queue!"); return; }
 		if(arg === "1") { msg.reply("You can't delete currently playing song from queue!"); return; } //To remove in situation as below
-		songsToRemove.push(parseInt(arg) - 1); //-1 to delete if queuePages won't have now playing song in first index
+		let num = parseInt(arg) - 1; //-1 to delete if queuePages won't have now playing song in first index
+		if(songsToRemove.indexOf(num) >= 0) return;
+		songsToRemove.push(num);
 	});
+	songsToRemove.sort((a, b)=>
+	{
+		if(a < b) return 1;
+		else if(a > b) return -1;
+		else return 0;
+	});
+	log(songsToRemove);
 	songsToRemove.forEach(num =>
 	{
 		if(num > queue.length - 2) { msg.reply(`There is no song **${num+1}** in the queue!`); return; }
