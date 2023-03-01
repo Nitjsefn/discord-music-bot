@@ -1,0 +1,18 @@
+{
+  "name": "discord-music-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@discordjs/voice": "^0.7.5",
+    "discord.js": "^13.3.1",
+    "ffmpeg": "^0.0.4",
+    "jsmediatags": "^3.9.7",
+    "tweetnacl": "^1.0.3"
+  }
+}
